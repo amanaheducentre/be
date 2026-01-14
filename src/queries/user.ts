@@ -1,6 +1,6 @@
 import { tables, useDB } from "../plugin/database/conn.js";
 import { eq, and } from "drizzle-orm";
-import { UserSchemaStatic } from "../schemas/user.schema.js";
+import { User } from "../schemas/user.schema.js";
 
 export type FindUserWhere = { username?: string; email?: string; sub?: string };
 
@@ -22,7 +22,7 @@ export async function getUserBy(where: FindUserWhere) {
   return row;
 }
 
-export async function postUser(user: UserSchemaStatic) {
+export async function postUser(user: User) {
   const register = await useDB()
     .insert(tables.usersTable)
     .values({
