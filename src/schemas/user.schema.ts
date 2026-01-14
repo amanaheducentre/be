@@ -10,4 +10,4 @@ export const UserSchema = t.Object({
   role: t.Optional(t.String()),
 });
 
-export type UserSchemaStatic = typeof UserSchema.static;
+export type User = typeof UserSchema.static;

@@ -3,24 +3,9 @@ import { Elysia, t } from "elysia";
 import { jwt } from "@elysiajs/jwt";
 import { openapi } from "@elysiajs/openapi";
 import { getUserBy, postUser } from "./queries/user.js";
-import { UserSchema, UserSchemaStatic } from "./schemas/user.schema.js";
-
-// Reusable elysia schemas
-const headerSchema = t.Object({
-  authorization: t.String({ examples: ["Bearer ey11223344556677889900"] }),
-});
-
-const ErrorSchema = t.Object({
-  message: t.String(),
-});
-
-const OkSchema = t.Object({
-  ok: t.Boolean(),
-});
-
-const TokenSchema = t.Object({
-  token: t.String(),
-});
+import { UserSchema } from "./schemas/user.schema.js";
+import { ApiError, ApiHeaderSchema, ApiResponseSchema } from "./schemas/api.schema.js";
+import { fail, ok } from "./utils/response.js";
 
 const SignBodySchema = t.Object({
   id: t.Optional(t.String({ format: "uuid" })),
@@ -37,36 +22,61 @@ const app = new Elysia()
       secret: "pR1as0LoITul4GI",
     })
   )
+
+  // Errors pool
+  .derive(() => {
+    const errors: ApiError[] = [];
+    const addError = (e: ApiError) => {
+      errors.push(e);
+    };
+    const hasError = () => errors.length > 0;
+
+    return {
+      errors,
+      addError,
+      hasError,
+    };
+  })
+
+  .onAfterHandle(({ errors, hasError, set }) => {
+    if (hasError()) {
+      set.status = errors[0].code;
+      return fail(errors[0].code, errors);
+    }
+  })
+
   .get("/", "hello from elysia")
 
   // SIGN IN
   .post(
     "/sign",
-    async ({ jwt, body, status }) => {
+    async ({ jwt, body, addError }) => {
       const user = await getUserBy(body);
 
       if (user.length <= 0) {
-        return status(400, { message: "User not found" });
+        addError({
+          code: 400,
+          message: "User not found",
+        });
       }
 
       const auth = user[0];
 
-      const ok = await Bun.password.verify(body.password, auth.password, "bcrypt");
-      if (!ok) {
-        return status(401, { message: "Invalid credentials" });
+      const isVerified = await Bun.password.verify(body.password, auth.password, "bcrypt");
+      if (!isVerified) {
+        addError({
+          code: 401,
+          message: "Invalid credentials",
+        });
       }
 
       const token = await jwt.sign({ sub: auth.sub, role: auth.role });
 
-      return status(200, { token });
+      return ok({ token });
     },
     {
       body: SignBodySchema,
-      response: {
-        200: TokenSchema,
-        400: ErrorSchema,
-        401: ErrorSchema,
-      },
+      response: ApiResponseSchema,
       detail: {
         summary: "Sign in",
       },
@@ -78,20 +88,21 @@ const app = new Elysia()
       // REGISTER
       .post(
         "/register",
-        async ({ body, status }) => {
+        async ({ body, addError }) => {
           try {
             await postUser(body);
-            return status(200, { ok: true });
+            return ok({});
           } catch (e: any) {
-            return status(500, { message: e?.message ?? "Internal server error" });
+            addError({
+              code: 500,
+              message: "Internal server error",
+            });
+            return ok(null);
           }
         },
         {
           body: UserSchema,
-          response: {
-            200: OkSchema,
-            500: ErrorSchema,
-          },
+          response: ApiResponseSchema,
           detail: {
             summary: "Register user",
           },
@@ -101,33 +112,39 @@ const app = new Elysia()
       // PROFILE
       .get(
         "/profile",
-        async ({ jwt, status, headers: { authorization } }) => {
-          // "authorization" biasanya "Bearer <token>"
+        async ({ jwt, headers: { authorization }, addError }) => {
           const token = authorization?.startsWith("Bearer ") ? authorization.slice("Bearer ".length) : authorization;
 
           if (!token) {
-            return status(401, { message: "Missing Authorization header" });
+            addError({
+              code: 401,
+              message: "Missing Authorization header",
+            });
           }
 
           const user = await jwt.verify(token);
           if (!user) {
-            return status(401, { message: "Invalid token" });
+            addError({
+              code: 401,
+              message: "Invalid token",
+            });
+
+            return ok(null);
           }
 
           const profile = await getUserBy({ sub: user.sub });
           if (profile.length <= 0) {
-            return status(404, { message: "Profile not found" });
+            addError({
+              code: 404,
+              message: "Profile not found",
+            });
           }
 
-          return status(200, profile[0] as UserSchemaStatic);
+          return ok(profile[0]);
         },
         {
-          headers: headerSchema,
-          response: {
-            200: UserSchema,
-            401: ErrorSchema,
-            404: ErrorSchema,
-          },
+          headers: ApiHeaderSchema,
+          response: ApiResponseSchema,
           detail: {
             summary: "Get current user profile",
           },
