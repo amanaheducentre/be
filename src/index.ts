@@ -3,9 +3,10 @@ import { Elysia, t } from "elysia";
 import { jwt } from "@elysiajs/jwt";
 import { openapi } from "@elysiajs/openapi";
 import { getUserBy, postUser } from "./queries/user.js";
-import { UserSchema } from "./schemas/user.schema.js";
+import { User, UserResponseSchema, UserSchema } from "./schemas/user.schema.js";
 import { ApiError, ApiHeaderSchema, ApiResponseSchema } from "./schemas/api.schema.js";
 import { fail, ok } from "./utils/response.js";
+import { SignResponseSchema } from "./schemas/sign.schema.js";
 
 const SignBodySchema = t.Object({
   id: t.Optional(t.String({ format: "uuid" })),
@@ -45,7 +46,15 @@ const app = new Elysia()
     }
   })
 
-  .get("/", "hello from elysia")
+  .get(
+    "/",
+    () => {
+      return ok({ hello: "from elysia" });
+    },
+    {
+      response: ApiResponseSchema,
+    }
+  )
 
   // SIGN IN
   .post(
@@ -76,7 +85,7 @@ const app = new Elysia()
     },
     {
       body: SignBodySchema,
-      response: ApiResponseSchema,
+      response: SignResponseSchema,
       detail: {
         summary: "Sign in",
       },
@@ -90,19 +99,19 @@ const app = new Elysia()
         "/register",
         async ({ body, addError }) => {
           try {
-            await postUser(body);
-            return ok({});
+            const user = await postUser(body);
+            return ok(user);
           } catch (e: any) {
             addError({
               code: 500,
               message: "Internal server error",
             });
-            return ok(null);
+            return ok({} as User);
           }
         },
         {
           body: UserSchema,
-          response: ApiResponseSchema,
+          response: UserResponseSchema,
           detail: {
             summary: "Register user",
           },
@@ -129,7 +138,7 @@ const app = new Elysia()
               message: "Invalid token",
             });
 
-            return ok(null);
+            return ok({} as User);
           }
 
           const profile = await getUserBy({ sub: user.sub });
@@ -144,7 +153,7 @@ const app = new Elysia()
         },
         {
           headers: ApiHeaderSchema,
-          response: ApiResponseSchema,
+          response: UserResponseSchema,
           detail: {
             summary: "Get current user profile",
           },

@@ -1,4 +1,5 @@
 import { t } from "elysia";
+import { ApiResponseSchema } from "./api.schema.js";
 
 export const UserSchema = t.Object({
   sub: t.Optional(t.String()),
@@ -9,5 +10,12 @@ export const UserSchema = t.Object({
   picture: t.Optional(t.Union([t.String(), t.Null()])),
   role: t.Optional(t.String()),
 });
+
+export const UserResponseSchema = t.Intersect([
+  ApiResponseSchema,
+  t.Object({
+    data: UserSchema,
+  }),
+]);
 
 export type User = typeof UserSchema.static;

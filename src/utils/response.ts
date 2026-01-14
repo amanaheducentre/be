@@ -1,6 +1,6 @@
 import type { ApiError, ApiResponse } from "../schemas/api.schema.js";
 
-export function ok<T>(data: T, status = 200, message = "OK"): ApiResponse<T> {
+export function ok<T>(data: T, status = 200, message = "OK") {
   return {
     ok: true,
     status,

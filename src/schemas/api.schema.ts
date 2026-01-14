@@ -9,7 +9,7 @@ export const ApiResponseSchema = t.Object({
   ok: t.Boolean(),
   status: t.Number(),
   message: t.String(),
-  data: t.Optional(t.Unknown()),
+  // data: t.Optional(t.Unknown()),
   errors: t.Optional(t.Array(ApiErrorSchema)),
   meta: t.Optional(t.Record(t.String(), t.Unknown())),
 });
