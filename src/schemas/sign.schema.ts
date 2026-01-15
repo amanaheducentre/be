@@ -9,3 +9,19 @@ export const SignResponseSchema = t.Intersect([
     }),
   }),
 ]);
+
+export const CheckBodySchema = t.Object({
+  id: t.Optional(t.String({ format: "uuid" })),
+  username: t.Optional(t.String()),
+  email: t.Optional(t.String()),
+});
+
+export const SignBodySchema = t.Intersect([
+  CheckBodySchema,
+  t.Object({
+    type: t.Union([t.Literal("local"), t.Literal("sso")]),
+    provider: t.Optional(t.String()),
+    token: t.Optional(t.String()),
+    password: t.Optional(t.String({ minLength: 8 })),
+  }),
+]);

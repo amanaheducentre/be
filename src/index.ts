@@ -6,20 +6,8 @@ import { getUserBy, postUser } from "./queries/user.js";
 import { User, UserCheckResponseSchema, UserResponseSchema, UserSchema } from "./schemas/user.schema.js";
 import { ApiError, ApiHeaderSchema, ApiResponseSchema } from "./schemas/api.schema.js";
 import { fail, ok } from "./utils/response.js";
-import { SignResponseSchema } from "./schemas/sign.schema.js";
-
-const CheckBodySchema = t.Object({
-  id: t.Optional(t.String({ format: "uuid" })),
-  username: t.Optional(t.String()),
-  email: t.Optional(t.String()),
-});
-
-const SignBodySchema = t.Intersect([
-  CheckBodySchema,
-  t.Object({
-    password: t.String({ minLength: 8 }),
-  }),
-]);
+import { CheckBodySchema, SignBodySchema, SignResponseSchema } from "./schemas/sign.schema.js";
+import { verifyGoogleIdToken } from "./utils/google.js";
 
 const app = new Elysia()
   .use(openapi())
@@ -66,6 +54,23 @@ const app = new Elysia()
   .post(
     "/sign",
     async ({ jwt, body, addError }) => {
+      if (body.type == "sso") {
+        switch (body.provider) {
+          case "google":
+            const gAuth = await verifyGoogleIdToken(body.token!);
+            body = {
+              ...body,
+              email: gAuth.email,
+            };
+          default:
+            addError({
+              code: 401,
+              message: "Invalid sso provider",
+            });
+            return ok({ token: "" });
+        }
+      }
+
       const user = await getUserBy(body);
 
       if (user.length <= 0) {
@@ -77,12 +82,17 @@ const app = new Elysia()
 
       const auth = user[0];
 
-      const isVerified = await Bun.password.verify(body.password, auth.password, "bcrypt");
-      if (!isVerified) {
-        addError({
-          code: 401,
-          message: "Invalid credentials",
-        });
+      // Verify password if login type is local
+      if (body.type == "local") {
+        const isVerified = await Bun.password.verify(body.password!, auth.password, "bcrypt");
+        if (!isVerified) {
+          addError({
+            code: 401,
+            message: "Invalid credentials",
+          });
+        }
+
+        return ok({ token: "" });
       }
 
       const token = await jwt.sign({ sub: auth.sub, role: auth.role });
