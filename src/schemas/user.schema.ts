@@ -18,4 +18,14 @@ export const UserResponseSchema = t.Intersect([
   }),
 ]);
 
+export const UserCheckResponseSchema = t.Intersect([
+  ApiResponseSchema,
+  t.Object({
+    data: t.Object({
+      registered: t.Boolean(),
+    }),
+  }),
+]);
+
 export type User = typeof UserSchema.static;
+export type UserCheck = typeof UserCheckResponseSchema.static;

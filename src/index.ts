@@ -3,17 +3,23 @@ import { Elysia, t } from "elysia";
 import { jwt } from "@elysiajs/jwt";
 import { openapi } from "@elysiajs/openapi";
 import { getUserBy, postUser } from "./queries/user.js";
-import { User, UserResponseSchema, UserSchema } from "./schemas/user.schema.js";
+import { User, UserCheckResponseSchema, UserResponseSchema, UserSchema } from "./schemas/user.schema.js";
 import { ApiError, ApiHeaderSchema, ApiResponseSchema } from "./schemas/api.schema.js";
 import { fail, ok } from "./utils/response.js";
 import { SignResponseSchema } from "./schemas/sign.schema.js";
 
-const SignBodySchema = t.Object({
+const CheckBodySchema = t.Object({
   id: t.Optional(t.String({ format: "uuid" })),
   username: t.Optional(t.String()),
   email: t.Optional(t.String()),
-  password: t.String({ minLength: 8 }),
 });
+
+const SignBodySchema = t.Intersect([
+  CheckBodySchema,
+  t.Object({
+    password: t.String({ minLength: 8 }),
+  }),
+]);
 
 const app = new Elysia()
   .use(openapi())
@@ -94,6 +100,25 @@ const app = new Elysia()
 
   .group("/user", (app) =>
     app
+      // CHECK
+      .post(
+        "/check",
+        async ({ body }) => {
+          const user = await getUserBy(body);
+
+          return ok({
+            registered: user.length > 0,
+          });
+        },
+        {
+          body: CheckBodySchema,
+          response: UserCheckResponseSchema,
+          detail: {
+            summary: "Check user status",
+          },
+        }
+      )
+
       // REGISTER
       .post(
         "/register",
