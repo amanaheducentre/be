@@ -204,7 +204,6 @@ const app = new Elysia()
           },
         }
       )
-  )
-  .listen(8000);
+  );
 
 export default app;
