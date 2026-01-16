@@ -40,6 +40,16 @@ const app = new Elysia()
     }
   })
 
+  .onError(({ error, code }) => {
+    const statusCode = typeof code == "number" ? code : 500;
+    return fail(statusCode, [
+      {
+        code: statusCode,
+        message: error.toString(),
+      },
+    ]);
+  })
+
   .get(
     "/",
     () => {
@@ -62,12 +72,12 @@ const app = new Elysia()
               ...body,
               email: gAuth.email,
             };
+            break;
           default:
             addError({
               code: 401,
               message: "Invalid sso provider",
             });
-            return ok({ token: "" });
         }
       }
 
