@@ -101,8 +101,6 @@ const app = new Elysia()
             message: "Invalid credentials",
           });
         }
-
-        return ok({ token: "" });
       }
 
       const token = await jwt.sign({ sub: auth.sub, role: auth.role });
