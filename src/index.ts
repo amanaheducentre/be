@@ -8,6 +8,7 @@ import { ApiError, ApiHeaderSchema, ApiResponseSchema } from "./schemas/api.sche
 import { fail, ok } from "./utils/response.js";
 import { CheckBodySchema, SignBodySchema, SignResponseSchema } from "./schemas/sign.schema.js";
 import { verifyGoogleIdToken } from "./utils/google.js";
+import { useDB } from "./plugin/database/client.js";
 
 const app = new Elysia()
   .use(openapi())
@@ -15,7 +16,7 @@ const app = new Elysia()
     jwt({
       name: "jwt",
       secret: "pR1as0LoITul4GI",
-    })
+    }),
   )
 
   // Errors pool
@@ -30,6 +31,15 @@ const app = new Elysia()
       errors,
       addError,
       hasError,
+    };
+  })
+
+  // Build database connection
+  .derive(() => {
+    const dbClient = useDB();
+
+    return {
+      db: dbClient,
     };
   })
 
@@ -57,13 +67,13 @@ const app = new Elysia()
     },
     {
       response: ApiResponseSchema,
-    }
+    },
   )
 
   // SIGN IN
   .post(
     "/sign",
-    async ({ jwt, body, addError }) => {
+    async ({ jwt, body, addError, db }) => {
       if (body.type == "sso") {
         switch (body.provider) {
           case "google":
@@ -81,7 +91,7 @@ const app = new Elysia()
         }
       }
 
-      const user = await getUserBy(body);
+      const user = await getUserBy(db, body);
 
       if (user.length <= 0) {
         addError({
@@ -94,7 +104,7 @@ const app = new Elysia()
 
       // Verify password if login type is local
       if (body.type == "local") {
-        const isVerified = await Bun.password.verify(body.password!, auth.password, "bcrypt");
+        const isVerified = await Bun.password.verify(body.password!, auth.password!, "bcrypt");
         if (!isVerified) {
           addError({
             code: 401,
@@ -103,7 +113,7 @@ const app = new Elysia()
         }
       }
 
-      const token = await jwt.sign({ sub: auth.sub, role: auth.role });
+      const token = await jwt.sign({ sub: auth.id });
 
       return ok({ token });
     },
@@ -113,7 +123,7 @@ const app = new Elysia()
       detail: {
         summary: "Sign in",
       },
-    }
+    },
   )
 
   .group("/user", (app) =>
@@ -121,8 +131,8 @@ const app = new Elysia()
       // CHECK
       .post(
         "/check",
-        async ({ body }) => {
-          const user = await getUserBy(body);
+        async ({ body, db }) => {
+          const user = await getUserBy(db, body);
 
           return ok({
             registered: user.length > 0,
@@ -134,15 +144,15 @@ const app = new Elysia()
           detail: {
             summary: "Check user status",
           },
-        }
+        },
       )
 
       // REGISTER
       .post(
         "/register",
-        async ({ body, addError }) => {
+        async ({ body, addError, db }) => {
           try {
-            const user = await postUser(body);
+            const user = await postUser(db, body);
             return ok(user);
           } catch (e: any) {
             addError({
@@ -158,13 +168,13 @@ const app = new Elysia()
           detail: {
             summary: "Register user",
           },
-        }
+        },
       )
 
       // PROFILE
       .get(
         "/profile",
-        async ({ jwt, headers: { authorization }, addError }) => {
+        async ({ jwt, headers: { authorization }, addError, db }) => {
           const token = authorization?.startsWith("Bearer ") ? authorization.slice("Bearer ".length) : authorization;
 
           if (!token) {
@@ -184,7 +194,7 @@ const app = new Elysia()
             return ok({} as User);
           }
 
-          const profile = await getUserBy({ sub: user.sub });
+          const profile = await getUserBy(db, { id: user.id?.toString() });
           if (profile.length <= 0) {
             addError({
               code: 404,
@@ -200,8 +210,8 @@ const app = new Elysia()
           detail: {
             summary: "Get current user profile",
           },
-        }
-      )
+        },
+      ),
   );
 
 export default app;

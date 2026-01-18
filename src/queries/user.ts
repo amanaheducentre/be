@@ -1,41 +1,45 @@
-import { tables, useDB } from "../plugin/database/conn.js";
+import { tables } from "../plugin/database/client.js";
 import { eq, and } from "drizzle-orm";
 import { User } from "../schemas/user.schema.js";
+import { LibSQLDatabase } from "drizzle-orm/libsql";
 
-export type FindUserWhere = { username?: string; email?: string; sub?: string };
+export type FindUserWhere = { username?: string; email?: string; id?: string };
 
-export async function getUserBy(where: FindUserWhere) {
+export async function getUserBy(db: LibSQLDatabase<Record<string, never>>, where: FindUserWhere): Promise<User[]> {
   const conditions = [];
 
   if ("username" in where) conditions.push(eq(tables.usersTable.name, where.username!));
   if ("email" in where) conditions.push(eq(tables.usersTable.email, where.email!));
-  if ("sub" in where) conditions.push(eq(tables.usersTable.sub, where.sub!));
+  if ("id" in where) conditions.push(eq(tables.usersTable.id, where.id!));
 
   if (conditions.length <= 0) return [];
 
-  const row = await useDB()
+  const row = await db
     .select()
     .from(tables.usersTable)
     .where(conditions.length == 1 ? conditions[0] : and(...conditions))
     .limit(1);
 
-  return row;
+  return row as User[];
 }
 
-export async function postUser(user: User) {
-  const register = await useDB()
+export async function postUser(db: LibSQLDatabase<Record<string, never>>, user: User): Promise<User> {
+  const now = Math.floor(new Date().getTime() / 1000);
+  const register = await db
     .insert(tables.usersTable)
     .values({
-      sub: crypto.randomUUID(),
+      id: crypto.randomUUID(),
       name: user.name,
       email: user.email,
       password: await Bun.password.hash(user.password, {
         algorithm: "bcrypt",
       }),
-      picture: user.picture,
+      avatar: user.avatar,
+      createdAt: now,
+      updatedAt: now,
     })
     .returning()
     .get();
 
-  return register;
+  return register as User;
 }

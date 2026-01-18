@@ -2,13 +2,16 @@ import { t } from "elysia";
 import { ApiResponseSchema } from "./api.schema.js";
 
 export const UserSchema = t.Object({
-  sub: t.Optional(t.String()),
+  id: t.Optional(t.String()),
   name: t.String(),
   username: t.Optional(t.Union([t.String({ minLength: 6 }), t.Null()])),
   email: t.String({ format: "email" }),
   password: t.String({ minLength: 8 }),
-  picture: t.Optional(t.Union([t.String(), t.Null()])),
-  role: t.Optional(t.String()),
+  avatar: t.Optional(t.Union([t.String(), t.Null()])),
+  bio: t.Optional(t.String()),
+  phone: t.Optional(t.String()),
+  location: t.Optional(t.String()),
+  status: t.Union([t.Literal("active"), t.Literal("banned")]),
 });
 
 export const UserResponseSchema = t.Intersect([
