@@ -24,7 +24,7 @@ export const usersTable = sqliteTable(
     name: text("name").notNull(),
     username: text("username"),
     email: text("email").notNull(),
-    password: text("password"),
+    password: text("password").notNull(),
     avatar: text("avatar"),
     bio: text("bio"),
     phone: text("phone"),

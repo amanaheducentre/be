@@ -2,6 +2,7 @@ import "dotenv/config";
 import { Elysia, t } from "elysia";
 import { jwt } from "@elysiajs/jwt";
 import { openapi } from "@elysiajs/openapi";
+import { logger } from "@bogeychan/elysia-logger";
 import { getUserBy, postUser } from "./queries/user.js";
 import { User, UserCheckResponseSchema, UserResponseSchema, UserSchema } from "./schemas/user.schema.js";
 import { ApiError, ApiHeaderSchema, ApiResponseSchema } from "./schemas/api.schema.js";
@@ -11,6 +12,7 @@ import { verifyGoogleIdToken } from "./utils/google.js";
 import { useDB } from "./plugin/database/client.js";
 
 const app = new Elysia()
+  .use(logger())
   .use(openapi())
   .use(
     jwt({
@@ -74,6 +76,8 @@ const app = new Elysia()
   .post(
     "/sign",
     async ({ jwt, body, addError, db }) => {
+      let token = "";
+
       if (body.type == "sso") {
         switch (body.provider) {
           case "google":
@@ -93,27 +97,29 @@ const app = new Elysia()
 
       const user = await getUserBy(db, body);
 
-      if (user.length <= 0) {
-        addError({
-          code: 400,
-          message: "User not found",
-        });
-      }
-
-      const auth = user[0];
-
-      // Verify password if login type is local
       if (body.type == "local") {
-        const isVerified = await Bun.password.verify(body.password!, auth.password!, "bcrypt");
-        if (!isVerified) {
+        if (user.length <= 0) {
           addError({
-            code: 401,
-            message: "Invalid credentials",
+            code: 400,
+            message: "User not found",
           });
+        } else {
+          const auth = user[0];
+
+          // Verify password if login type is local
+          if (body.type == "local") {
+            const isVerified = await Bun.password.verify(body.password!, auth.password!, "bcrypt");
+            if (!isVerified) {
+              addError({
+                code: 401,
+                message: "Invalid credentials",
+              });
+            }
+          }
+
+          token = await jwt.sign({ sub: auth.id });
         }
       }
-
-      const token = await jwt.sign({ sub: auth.id });
 
       return ok({ token });
     },
@@ -194,7 +200,7 @@ const app = new Elysia()
             return ok({} as User);
           }
 
-          const profile = await getUserBy(db, { id: user.id?.toString() });
+          const profile = await getUserBy(db, { id: user.sub });
           if (profile.length <= 0) {
             addError({
               code: 404,

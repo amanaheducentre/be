@@ -5,7 +5,7 @@ import { LibSQLDatabase } from "drizzle-orm/libsql";
 
 export type FindUserWhere = { username?: string; email?: string; id?: string };
 
-export async function getUserBy(db: LibSQLDatabase<Record<string, never>>, where: FindUserWhere): Promise<User[]> {
+export async function getUserBy(db: LibSQLDatabase<Record<string, never>>, where: FindUserWhere) {
   const conditions = [];
 
   if ("username" in where) conditions.push(eq(tables.usersTable.name, where.username!));
@@ -20,10 +20,10 @@ export async function getUserBy(db: LibSQLDatabase<Record<string, never>>, where
     .where(conditions.length == 1 ? conditions[0] : and(...conditions))
     .limit(1);
 
-  return row as User[];
+  return row;
 }
 
-export async function postUser(db: LibSQLDatabase<Record<string, never>>, user: User): Promise<User> {
+export async function postUser(db: LibSQLDatabase<Record<string, never>>, user: User) {
   const now = Math.floor(new Date().getTime() / 1000);
   const register = await db
     .insert(tables.usersTable)
@@ -35,11 +35,12 @@ export async function postUser(db: LibSQLDatabase<Record<string, never>>, user: 
         algorithm: "bcrypt",
       }),
       avatar: user.avatar,
+      status: "active",
       createdAt: now,
       updatedAt: now,
     })
     .returning()
     .get();
 
-  return register as User;
+  return register;
 }
