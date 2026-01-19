@@ -24,7 +24,7 @@ export async function getUserBy(db: LibSQLDatabase<Record<string, never>>, where
 }
 
 export async function postUser(db: LibSQLDatabase<Record<string, never>>, user: User) {
-  const now = Math.floor(new Date().getTime() / 1000);
+  const now = Math.floor(Date.now() / 1000);
   const register = await db
     .insert(tables.usersTable)
     .values({

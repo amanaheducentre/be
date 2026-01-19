@@ -10,6 +10,7 @@ import { fail, ok } from "./utils/response.js";
 import { CheckBodySchema, SignBodySchema, SignResponseSchema } from "./schemas/sign.schema.js";
 import { verifyGoogleIdToken } from "./utils/google.js";
 import { useDB } from "./plugin/database/client.js";
+import { listCourses } from "./queries/course.js";
 
 const app = new Elysia()
   .use(logger())
@@ -132,6 +133,7 @@ const app = new Elysia()
     },
   )
 
+  // USERS
   .group("/user", (app) =>
     app
       // CHECK
@@ -218,6 +220,20 @@ const app = new Elysia()
           },
         },
       ),
+  )
+
+  // COURSES
+  .group("/course", (app) =>
+    app.get("/", async ({ addError, db }) => {
+      const course = await listCourses(db, {});
+      if (!course) {
+        addError({
+          code: 404,
+          message: "Course not found",
+        });
+      }
+      return ok(course);
+    }),
   );
 
 export default app;

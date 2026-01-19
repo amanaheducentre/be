@@ -13,6 +13,7 @@
     "@libsql/client": "^0.17.0",
     "dotenv": "^17.2.3",
     "drizzle-orm": "^0.45.1",
+    "drizzle-seed": "^0.3.1",
     "elysia": "latest"
   },
   "devDependencies": {

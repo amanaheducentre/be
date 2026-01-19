@@ -1,5 +1,4 @@
 // server/db/schema.ts
-import { sql } from "drizzle-orm";
 import { foreignKey, sqliteTable, text, integer, real, primaryKey, uniqueIndex, index } from "drizzle-orm/sqlite-core";
 
 // =========================
@@ -12,7 +11,7 @@ import { foreignKey, sqliteTable, text, integer, real, primaryKey, uniqueIndex, 
 const ts = (name: string) => integer(name);
 
 /** Boolean di SQLite: 0/1 */
-const bool = (name: string) => integer(name, { mode: "number" }).notNull().default(0);
+const bool = (name: string) => integer(name, { mode: "boolean" }).notNull().default(false);
 
 // =========================
 // Users & Roles
