@@ -23,6 +23,27 @@ type CourseListParams = {
   pageSize?: number;
 };
 
+/**
+ * List courses based on given parameters.
+ *
+ * @param db The database instance.
+ * @param params The parameters to filter the courses.
+ * @returns A promise that resolves to an object containing the total count of courses and an array of course objects.
+ *
+ * @example
+ * listCourses(db, {
+ *   q: "javascript",
+ *   categoryId: "javascript",
+ *   instructorId: "user-id",
+ *   levelId: "beginner",
+ *   status: "published",
+ *   minPrice: 0,
+ *   maxPrice: 500000,
+ *   sort: "newest",
+ *   page: 1,
+ *   pageSize: 12,
+ * })
+ */
 export async function listCourses(db: LibSQLDatabase<Record<string, never>>, params: CourseListParams) {
   const page = Math.max(1, params.page ?? 1);
   const pageSize = Math.min(50, Math.max(1, params.pageSize ?? 12));
@@ -94,6 +115,32 @@ export async function listCourses(db: LibSQLDatabase<Record<string, never>>, par
   };
 }
 
+/**
+ * Get course detail by id.
+ *
+ * @param db - LibSQLDatabase instance
+ * @param courseId - course id
+ *
+ * @returns Course detail object, or null if not found.
+ *
+ * The returned object contains the following properties:
+ * - id
+ * - title
+ * - subtitle
+ * - description
+ * - thumbnailUrl
+ * - promoVideoUrl
+ * - language
+ * - currency
+ * - priceCurrent
+ * - ratingAvg
+ * - ratingCount
+ * - studentCount
+ * - instructor (object with id, name, avatar, and bio)
+ * - sections (array of objects with id, title, sortOrder, and lectures)
+ *   - lectures (array of objects with id, sectionId, type, title, description, durationSeconds, isPreview, sortOrder, status, and assets)
+ *     - assets (array of objects with id, lectureId, assetType, url, filename, and sizeBytes)
+ */
 export async function getCourseDetail(db: LibSQLDatabase<Record<string, never>>, courseId: string) {
   const [course] = await db
     .select({
@@ -187,6 +234,17 @@ export async function getCourseDetail(db: LibSQLDatabase<Record<string, never>>,
   };
 }
 
+/**
+ * Get course enrollment detail by user id and course id.
+ *
+ * @param db - LibSQLDatabase instance
+ * @param userId - user id
+ * @param courseId - course id
+ *
+ * @returns Object with two properties:
+ * - enroll: Enrollment detail object, containing id, status, enrolledAt, and accessExpiresAt
+ * - hasAccess: boolean indicating whether the user has valid access to the course
+ */
 export async function getEnrollment(db: LibSQLDatabase<Record<string, never>>, userId: string, courseId: string) {
   const [enroll] = await db
     .select({
@@ -207,6 +265,19 @@ export async function getEnrollment(db: LibSQLDatabase<Record<string, never>>, u
   return { enroll, hasAccess };
 }
 
+/**
+ * Enroll user to a course.
+ *
+ * @param db - LibSQLDatabase instance
+ * @param input - Object containing:
+ * - id: Enrollment id (uuid)
+ * - userId: User id
+ * - courseId: Course id
+ * - source: Enrollment source (purchase/free/coupon/gift/admin_grant)
+ * - accessExpiresAt: Timestamp (unix seconds) when the access expires (null if no expiration)
+ *
+ * @returns Object containing enrollment detail and a boolean indicating whether the user has valid access to the course
+ */
 export async function enrollCourse(
   db: any,
   input: {
