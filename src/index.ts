@@ -2,12 +2,13 @@ import "dotenv/config";
 import { Elysia, t } from "elysia";
 import { jwt } from "@elysiajs/jwt";
 import { openapi } from "@elysiajs/openapi";
+import { fail, ok } from "./utils/response.js";
 import { logger } from "@bogeychan/elysia-logger";
 import { getUserBy, postUser } from "./queries/user.js";
 import { User, UserCheckResponseSchema, UserResponseSchema, UserSchema } from "./schemas/user.schema.js";
 import { ApiError, ApiHeaderSchema, ApiResponseSchema } from "./schemas/api.schema.js";
-import { fail, ok } from "./utils/response.js";
 import { CheckBodySchema, SignBodySchema, SignResponseSchema } from "./schemas/sign.schema.js";
+import { CourseListResponseSchema } from "./schemas/course.schema.js";
 import { verifyGoogleIdToken } from "./utils/google.js";
 import { useDB } from "./plugin/database/client.js";
 import { listCourses } from "./queries/course.js";
@@ -224,16 +225,22 @@ const app = new Elysia()
 
   // COURSES
   .group("/course", (app) =>
-    app.get("/", async ({ addError, db }) => {
-      const course = await listCourses(db, {});
-      if (!course) {
-        addError({
-          code: 404,
-          message: "Course not found",
-        });
-      }
-      return ok(course);
-    }),
+    app.get(
+      "/",
+      async ({ addError, db }) => {
+        const course = await listCourses(db, {});
+        if (!course) {
+          addError({
+            code: 404,
+            message: "Course not found",
+          });
+        }
+        return ok(course);
+      },
+      {
+        response: CourseListResponseSchema,
+      },
+    ),
   );
 
 export default app;
