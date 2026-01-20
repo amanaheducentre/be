@@ -2,6 +2,22 @@ import { and, eq, sql } from "drizzle-orm";
 import { coursesTable, courseReviewsTable } from "../plugin/database/schema.js";
 import { LibSQLDatabase } from "drizzle-orm/libsql";
 
+/**
+ * Upsert a course review into the database.
+ * If the review already exists, it will be updated.
+ * If the review does not exist, it will be inserted.
+ *
+ * @param db - LibSQLDatabase instance
+ * @param input - Object containing:
+ * - id: Review id
+ * - userId: User id
+ * - courseId: Course id
+ * - rating: Rating (1..5)
+ * - title: Review title (optional)
+ * - body: Review body (optional)
+ *
+ * @returns true if successful, otherwise false
+ */
 export async function upsertCourseReview(
   db: LibSQLDatabase<Record<string, never>>,
   input: {
@@ -25,8 +41,8 @@ export async function upsertCourseReview(
       rating: Math.max(1, Math.min(5, Math.floor(input.rating))),
       title: input.title ?? null,
       body: input.body ?? null,
-      isPublic: 1,
-      isFlagged: 0,
+      isPublic: true,
+      isFlagged: false,
       createdAt: now,
       updatedAt: now,
     })
@@ -46,6 +62,14 @@ export async function upsertCourseReview(
   return true;
 }
 
+/**
+ * Recompute the rating of a course based on its public reviews.
+ *
+ * @param db - LibSQLDatabase instance
+ * @param courseId - Course id
+ *
+ * @returns An object containing the recomputed rating count and average rating.
+ */
 export async function recomputeCourseRating(db: LibSQLDatabase<Record<string, never>>, courseId: string) {
   const [agg] = await db
     .select({
@@ -53,7 +77,7 @@ export async function recomputeCourseRating(db: LibSQLDatabase<Record<string, ne
       ratingAvg: sql<number>`coalesce(avg(${courseReviewsTable.rating}), 0)`,
     })
     .from(courseReviewsTable)
-    .where(and(eq(courseReviewsTable.courseId, courseId), eq(courseReviewsTable.isPublic, 1)));
+    .where(and(eq(courseReviewsTable.courseId, courseId), eq(courseReviewsTable.isPublic, true)));
 
   await db
     .update(coursesTable)

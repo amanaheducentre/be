@@ -5,6 +5,12 @@ import { LibSQLDatabase } from "drizzle-orm/libsql";
 
 export type FindUserWhere = { username?: string; email?: string; id?: string };
 
+/**
+ * Find a user by given conditions
+ * @param {LibSQLDatabase<Record<string, never>>} db - The database to query
+ * @param {FindUserWhere} where - The conditions to search for the user
+ * @returns {Promise<User[]>} - An array of users matching the conditions
+ */
 export async function getUserBy(db: LibSQLDatabase<Record<string, never>>, where: FindUserWhere) {
   const conditions = [];
 
@@ -23,6 +29,12 @@ export async function getUserBy(db: LibSQLDatabase<Record<string, never>>, where
   return row;
 }
 
+/**
+ * Register a new user
+ * @param {LibSQLDatabase<Record<string, never>>} db - The database to query
+ * @param {User} user - The user to register
+ * @returns {Promise<User>} - The registered user
+ */
 export async function postUser(db: LibSQLDatabase<Record<string, never>>, user: User) {
   const now = Math.floor(Date.now() / 1000);
   const register = await db
@@ -42,5 +54,7 @@ export async function postUser(db: LibSQLDatabase<Record<string, never>>, user: 
     .returning()
     .get();
 
+  // TODO
+  // Add record to users_role accordingly
   return register;
 }

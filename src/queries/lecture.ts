@@ -2,6 +2,30 @@ import { and, eq, sql } from "drizzle-orm";
 import { courseLecturesTable, lectureProgressTable, courseProgressSnapshotTable } from "../plugin/database/schema.js";
 import { LibSQLDatabase } from "drizzle-orm/libsql";
 
+/**
+ * Upsert lecture progress to the database.
+ *
+ * If the lecture progress does not exist, create a new one.
+ * If the lecture progress already exists, update the existing one.
+ *
+ * The `status` parameter is optional and defaults to `"in_progress"`.
+ * The `lastPositionSeconds` parameter is optional and defaults to `0`.
+ * The `completed` parameter is optional and defaults to `false`.
+ *
+ * If `completed` is `true`, the `completedAt` field is set to the current timestamp.
+ * If `completed` is `false`, the `completedAt` field is set to `null`.
+ *
+ * @param db - LibSQLDatabase instance
+ * @param input - Object containing:
+ * - userId: User id
+ * - courseId: Course id
+ * - lectureId: Lecture id
+ * - status: "not_started" | "in_progress" | "completed"
+ * - lastPositionSeconds: Timestamp (unix seconds) of the last position in the lecture
+ * - completed: Boolean indicating whether the lecture is completed
+ *
+ * @returns Promise resolving to `true` if the upsert is successful
+ */
 export async function upsertLectureProgress(
   db: LibSQLDatabase<Record<string, never>>,
   input: {
@@ -47,6 +71,18 @@ export async function upsertLectureProgress(
   return true;
 }
 
+/**
+ * Recompute course progress snapshot for a user.
+ *
+ * @param db - LibSQLDatabase instance
+ * @param userId - User id
+ * @param courseId - Course id
+ *
+ * @returns Promise resolving to an object with the following properties:
+ * - percent: Percentage of completed lectures (0-100)
+ * - completed: Number of completed lectures
+ * - total: Total number of lectures in the course
+ */
 export async function recomputeCourseProgressSnapshot(
   db: LibSQLDatabase<Record<string, never>>,
   userId: string,

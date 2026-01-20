@@ -12,6 +12,8 @@ import { CourseListResponseSchema } from "./schemas/course.schema.js";
 import { verifyGoogleIdToken } from "./utils/google.js";
 import { useDB } from "./plugin/database/client.js";
 import { listCourses } from "./queries/course.js";
+import { getCoursesTags } from "./queries/tags.js";
+import { TagsQuerySchema, TagsResponseSchema } from "./schemas/tag.schema.js";
 
 const app = new Elysia()
   .use(logger())
@@ -225,22 +227,47 @@ const app = new Elysia()
 
   // COURSES
   .group("/course", (app) =>
-    app.get(
-      "/",
-      async ({ addError, db }) => {
-        const course = await listCourses(db, {});
-        if (!course) {
-          addError({
-            code: 404,
-            message: "Course not found",
-          });
-        }
-        return ok(course);
-      },
-      {
-        response: CourseListResponseSchema,
-      },
-    ),
+    app
+      .get(
+        "/list",
+        async ({ addError, db }) => {
+          const course = await listCourses(db, {});
+          if (!course) {
+            addError({
+              code: 404,
+              message: "Course not found",
+            });
+          }
+          return ok(course);
+        },
+        {
+          response: CourseListResponseSchema,
+          detail: {
+            summary: "Get list of courses",
+          },
+        },
+      )
+      .get(
+        "/tags",
+        async ({ query, addError, db }) => {
+          const courseIds = query.courseId.split(",");
+          const tags = await getCoursesTags(db, courseIds);
+          if (!tags) {
+            addError({
+              code: 404,
+              message: "Course not found",
+            });
+          }
+          return ok(tags);
+        },
+        {
+          query: TagsQuerySchema,
+          response: TagsResponseSchema,
+          detail: {
+            summary: "Get course tags",
+          },
+        },
+      ),
   );
 
 export default app;
