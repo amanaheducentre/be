@@ -54,7 +54,22 @@ export async function postUser(db: LibSQLDatabase<Record<string, never>>, user: 
     .returning()
     .get();
 
-  // TODO
-  // Add record to users_role accordingly
+  // Get the "student" role ID
+  const studentRole = await db
+    .select()
+    .from(tables.rolesTable)
+    .where(eq(tables.rolesTable.name, "student"))
+    .limit(1)
+    .get();
+
+  // If student role exists, assign it to the new user
+  if (studentRole) {
+    await db.insert(tables.userRolesTable).values({
+      userId: register.id,
+      roleId: studentRole.id,
+      createdAt: now,
+    });
+  }
+
   return register;
 }

@@ -1265,7 +1265,7 @@ async function populateDatabase() {
     // ===== 11. COURSE SECTIONS TABLE =====
     console.log("📝 Inserting course sections...");
     const sections = [
-      // Course 1 - Web Dev Bootcamp
+      // Course 1 - Web Dev Bootcamp (0-7)
       { id: generateId(), courseId: courseId1, title: "Pengenalan & Setup Environment", sortOrder: 1 },
       { id: generateId(), courseId: courseId1, title: "HTML Fundamentals", sortOrder: 2 },
       { id: generateId(), courseId: courseId1, title: "CSS & Responsive Design", sortOrder: 3 },
@@ -1275,7 +1275,7 @@ async function populateDatabase() {
       { id: generateId(), courseId: courseId1, title: "Node.js & Backend Development", sortOrder: 7 },
       { id: generateId(), courseId: courseId1, title: "Final Project & Deployment", sortOrder: 8 },
 
-      // Course 2 - React & Next.js
+      // Course 2 - React & Next.js (8-13)
       { id: generateId(), courseId: courseId2, title: "Review React Fundamentals", sortOrder: 1 },
       { id: generateId(), courseId: courseId2, title: "Advanced React Hooks", sortOrder: 2 },
       { id: generateId(), courseId: courseId2, title: "Next.js 14 Introduction", sortOrder: 3 },
@@ -1283,13 +1283,67 @@ async function populateDatabase() {
       { id: generateId(), courseId: courseId2, title: "Data Fetching & Caching Strategies", sortOrder: 5 },
       { id: generateId(), courseId: courseId2, title: "Performance Optimization", sortOrder: 6 },
 
-      // Course 3 - Flutter
+      // Course 3 - Flutter (14-19)
       { id: generateId(), courseId: courseId3, title: "Flutter Setup & Introduction", sortOrder: 1 },
       { id: generateId(), courseId: courseId3, title: "Dart Programming Language", sortOrder: 2 },
       { id: generateId(), courseId: courseId3, title: "Flutter Widgets & Layouts", sortOrder: 3 },
       { id: generateId(), courseId: courseId3, title: "State Management dengan Provider", sortOrder: 4 },
       { id: generateId(), courseId: courseId3, title: "Firebase Integration", sortOrder: 5 },
       { id: generateId(), courseId: courseId3, title: "Deployment to App Stores", sortOrder: 6 },
+
+      // Course 4 - Data Science (20)
+      { id: generateId(), courseId: courseId4, title: "Introduction to Data Science", sortOrder: 1 },
+
+      // Course 5 - Machine Learning (21)
+      { id: generateId(), courseId: courseId5, title: "Machine Learning Fundamentals", sortOrder: 1 },
+
+      // Course 6 - Microservices (22)
+      { id: generateId(), courseId: courseId6, title: "Microservices Introduction", sortOrder: 1 },
+
+      // Course 7 - DevOps (23)
+      { id: generateId(), courseId: courseId7, title: "DevOps Basics", sortOrder: 1 },
+
+      // Course 8 - React Native (24)
+      { id: generateId(), courseId: courseId8, title: "React Native Fundamentals", sortOrder: 1 },
+
+      // Course 9 - PostgreSQL (25)
+      { id: generateId(), courseId: courseId9, title: "PostgreSQL Basics", sortOrder: 1 },
+
+      // Course 10 - UI/UX Design (26)
+      { id: generateId(), courseId: courseId10, title: "UI/UX Design Principles", sortOrder: 1 },
+
+      // Course 11 - Python (27)
+      { id: generateId(), courseId: courseId11, title: "Python Programming Basics", sortOrder: 1 },
+
+      // Course 12 - TypeScript (28)
+      { id: generateId(), courseId: courseId12, title: "TypeScript Introduction", sortOrder: 1 },
+
+      // Course 13 - Docker (29)
+      { id: generateId(), courseId: courseId13, title: "Docker Fundamentals", sortOrder: 1 },
+
+      // Course 14 - REST API (30)
+      { id: generateId(), courseId: courseId14, title: "REST API Design", sortOrder: 1 },
+
+      // Course 15 - GraphQL (31)
+      { id: generateId(), courseId: courseId15, title: "GraphQL Basics", sortOrder: 1 },
+
+      // Course 16 - Vue.js (32)
+      { id: generateId(), courseId: courseId16, title: "Vue.js Fundamentals", sortOrder: 1 },
+
+      // Course 17 - MongoDB (33)
+      { id: generateId(), courseId: courseId17, title: "MongoDB Basics", sortOrder: 1 },
+
+      // Course 18 - Git & GitHub (34)
+      { id: generateId(), courseId: courseId18, title: "Git Basics", sortOrder: 1 },
+
+      // Course 19 - Linux (35)
+      { id: generateId(), courseId: courseId19, title: "Linux Fundamentals", sortOrder: 1 },
+
+      // Course 20 - English (36)
+      { id: generateId(), courseId: courseId20, title: "English Grammar Basics", sortOrder: 1 },
+
+      // Course 21 - Business (37)
+      { id: generateId(), courseId: courseId21, title: "Business Fundamentals", sortOrder: 1 },
     ];
 
     const insertedSections = await db.insert(schema.courseSectionsTable).values(sections).returning();
