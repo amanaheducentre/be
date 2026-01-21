@@ -142,28 +142,26 @@ const app = new Elysia()
 
       const user = await getUserBy(db, body);
 
-      if (body.type == "local") {
-        if (user.length <= 0) {
-          addError({
-            code: 400,
-            message: "User not found",
-          });
-        } else {
-          const auth = user[0];
+      if (user.length <= 0) {
+        addError({
+          code: 400,
+          message: "User not found",
+        });
+      } else {
+        const auth = user[0];
 
-          // Verify password if login type is local
-          if (body.type == "local") {
-            const isVerified = await Bun.password.verify(body.password!, auth.password!, "bcrypt");
-            if (!isVerified) {
-              addError({
-                code: 401,
-                message: "Invalid credentials",
-              });
-            }
+        // Verify password if login type is local
+        if (body.type == "local") {
+          const isVerified = await Bun.password.verify(body.password!, auth.password!, "bcrypt");
+          if (!isVerified) {
+            addError({
+              code: 401,
+              message: "Invalid credentials",
+            });
           }
-
-          token = await jwt.sign({ sub: auth.id });
         }
+
+        token = await jwt.sign({ sub: auth.id });
       }
 
       return ok({ token });
