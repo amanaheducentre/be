@@ -1,5 +1,5 @@
-import { and, eq, sql } from "drizzle-orm";
-import { coursesTable, courseReviewsTable } from "../plugin/database/schema.js";
+import { and, eq, sql, desc } from "drizzle-orm";
+import { coursesTable, courseReviewsTable, usersTable } from "../plugin/database/schema.js";
 import { LibSQLDatabase } from "drizzle-orm/libsql";
 
 /**
@@ -89,4 +89,45 @@ export async function recomputeCourseRating(db: LibSQLDatabase<Record<string, ne
     .where(eq(coursesTable.id, courseId));
 
   return agg;
+}
+
+/**
+ * Get reviews for a specific course
+ *
+ * @param db - LibSQLDatabase instance
+ * @param courseId - Course id
+ * @param page - Page number (default: 1)
+ * @param pageSize - Page size (default: 10)
+ *
+ * @returns Promise resolving to an object with data array of review objects
+ */
+export async function getCourseReviews(
+  db: LibSQLDatabase<Record<string, never>>,
+  courseId: string,
+  page: number = 1,
+  pageSize: number = 10,
+) {
+  const offset = (Math.max(1, page) - 1) * Math.min(50, Math.max(1, pageSize));
+
+  const reviews = await db
+    .select({
+      id: courseReviewsTable.id,
+      rating: courseReviewsTable.rating,
+      title: courseReviewsTable.title,
+      body: courseReviewsTable.body,
+      createdAt: courseReviewsTable.createdAt,
+      reviewer: {
+        id: usersTable.id,
+        name: usersTable.name,
+        avatar: usersTable.avatar,
+      },
+    })
+    .from(courseReviewsTable)
+    .leftJoin(usersTable, eq(usersTable.id, courseReviewsTable.userId))
+    .where(and(eq(courseReviewsTable.courseId, courseId), eq(courseReviewsTable.isPublic, true)))
+    .orderBy(desc(courseReviewsTable.createdAt))
+    .limit(Math.min(50, Math.max(1, pageSize)))
+    .offset(offset);
+
+  return { data: reviews };
 }

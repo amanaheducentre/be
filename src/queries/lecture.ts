@@ -1,5 +1,11 @@
-import { and, eq, sql } from "drizzle-orm";
-import { courseLecturesTable, lectureProgressTable, courseProgressSnapshotTable } from "../plugin/database/schema.js";
+import { and, eq, sql, asc } from "drizzle-orm";
+import {
+  courseLecturesTable,
+  courseSectionsTable,
+  lectureAssetsTable,
+  lectureProgressTable,
+  courseProgressSnapshotTable,
+} from "../plugin/database/schema.js";
 import { LibSQLDatabase } from "drizzle-orm/libsql";
 
 /**
@@ -136,4 +142,161 @@ export async function recomputeCourseProgressSnapshot(
     });
 
   return { percent, completed, total };
+}
+
+/**
+ * Get course curriculum with sections and lectures
+ *
+ * @param db - LibSQLDatabase instance
+ * @param courseId - Course id
+ * @param userId - Optional user id to include progress information
+ *
+ * @returns Promise resolving to an array of sections with their lectures
+ */
+export async function getCourseCurriculum(
+  db: LibSQLDatabase<Record<string, never>>,
+  courseId: string,
+  userId?: string,
+) {
+  // Get all sections for the course
+  const sections = await db
+    .select({
+      id: courseSectionsTable.id,
+      title: courseSectionsTable.title,
+      sortOrder: courseSectionsTable.sortOrder,
+    })
+    .from(courseSectionsTable)
+    .where(eq(courseSectionsTable.courseId, courseId))
+    .orderBy(asc(courseSectionsTable.sortOrder));
+
+  // Get all lectures for the course
+  const lectures = await db
+    .select({
+      id: courseLecturesTable.id,
+      sectionId: courseLecturesTable.sectionId,
+      type: courseLecturesTable.type,
+      title: courseLecturesTable.title,
+      description: courseLecturesTable.description,
+      durationSeconds: courseLecturesTable.durationSeconds,
+      isPreview: courseLecturesTable.isPreview,
+      sortOrder: courseLecturesTable.sortOrder,
+      status: courseLecturesTable.status,
+    })
+    .from(courseLecturesTable)
+    .where(and(eq(courseLecturesTable.courseId, courseId), eq(courseLecturesTable.status, "published")))
+    .orderBy(asc(courseLecturesTable.sortOrder));
+
+  // Get user progress if userId is provided
+  let userProgress: Map<string, any> = new Map();
+  if (userId) {
+    const progress = await db
+      .select({
+        lectureId: lectureProgressTable.lectureId,
+        status: lectureProgressTable.status,
+        lastPositionSeconds: lectureProgressTable.lastPositionSeconds,
+        completedAt: lectureProgressTable.completedAt,
+      })
+      .from(lectureProgressTable)
+      .where(and(eq(lectureProgressTable.userId, userId), eq(lectureProgressTable.courseId, courseId)));
+
+    progress.forEach((p) => {
+      userProgress.set(p.lectureId, p);
+    });
+  }
+
+  // Build curriculum structure
+  return sections.map((section) => {
+    const sectionLectures = lectures
+      .filter((l) => l.sectionId === section.id)
+      .map((lecture) => {
+        const progress = userProgress.get(lecture.id);
+        return {
+          ...lecture,
+          progress: progress
+            ? {
+                status: progress.status,
+                lastPositionSeconds: progress.lastPositionSeconds,
+                completedAt: progress.completedAt,
+              }
+            : null,
+        };
+      });
+
+    return {
+      ...section,
+      lectures: sectionLectures,
+      lectureCount: sectionLectures.length,
+      totalDuration: sectionLectures.reduce((sum, l) => sum + (l.durationSeconds || 0), 0),
+    };
+  });
+}
+
+/**
+ * Get lecture detail with assets
+ *
+ * @param db - LibSQLDatabase instance
+ * @param lectureId - Lecture id
+ * @param userId - Optional user id to include progress information
+ *
+ * @returns Promise resolving to lecture detail with assets and progress
+ */
+export async function getLectureDetail(db: LibSQLDatabase<Record<string, never>>, lectureId: string, userId?: string) {
+  // Get lecture detail
+  const [lecture] = await db
+    .select({
+      id: courseLecturesTable.id,
+      courseId: courseLecturesTable.courseId,
+      sectionId: courseLecturesTable.sectionId,
+      type: courseLecturesTable.type,
+      title: courseLecturesTable.title,
+      description: courseLecturesTable.description,
+      durationSeconds: courseLecturesTable.durationSeconds,
+      isPreview: courseLecturesTable.isPreview,
+      status: courseLecturesTable.status,
+      publishedAt: courseLecturesTable.publishedAt,
+    })
+    .from(courseLecturesTable)
+    .where(eq(courseLecturesTable.id, lectureId))
+    .limit(1);
+
+  if (!lecture) return null;
+
+  // Get lecture assets
+  const assets = await db
+    .select({
+      id: lectureAssetsTable.id,
+      assetType: lectureAssetsTable.assetType,
+      url: lectureAssetsTable.url,
+      filename: lectureAssetsTable.filename,
+      sizeBytes: lectureAssetsTable.sizeBytes,
+      metaJson: lectureAssetsTable.metaJson,
+    })
+    .from(lectureAssetsTable)
+    .where(eq(lectureAssetsTable.lectureId, lectureId));
+
+  // Get user progress if userId is provided
+  let progress = null;
+  if (userId) {
+    const [userProgress] = await db
+      .select({
+        status: lectureProgressTable.status,
+        lastPositionSeconds: lectureProgressTable.lastPositionSeconds,
+        completedAt: lectureProgressTable.completedAt,
+        updatedAt: lectureProgressTable.updatedAt,
+      })
+      .from(lectureProgressTable)
+      .where(and(eq(lectureProgressTable.userId, userId), eq(lectureProgressTable.lectureId, lectureId)))
+      .limit(1);
+
+    progress = userProgress || null;
+  }
+
+  return {
+    ...lecture,
+    assets: assets.map((a) => ({
+      ...a,
+      meta: a.metaJson ? JSON.parse(a.metaJson) : null,
+    })),
+    progress,
+  };
 }
