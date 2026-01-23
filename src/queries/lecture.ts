@@ -232,6 +232,63 @@ export async function getCourseCurriculum(
 }
 
 /**
+ * Get next and previous lecture in the course
+ *
+ * @param db - LibSQLDatabase instance
+ * @param courseId - Course id
+ * @param sectionId - Current section id
+ * @param sortOrder - Current lecture sort order
+ *
+ * @returns Promise resolving to object with next and prev lecture info
+ */
+export async function getNextPrevLecture(
+  db: LibSQLDatabase<Record<string, never>>,
+  courseId: string,
+  sectionId: string,
+  sortOrder: number,
+) {
+  // Get all published lectures in order
+  const allLectures = await db
+    .select({
+      id: courseLecturesTable.id,
+      sectionId: courseLecturesTable.sectionId,
+      title: courseLecturesTable.title,
+      type: courseLecturesTable.type,
+      sortOrder: courseLecturesTable.sortOrder,
+    })
+    .from(courseLecturesTable)
+    .innerJoin(courseSectionsTable, eq(courseLecturesTable.sectionId, courseSectionsTable.id))
+    .where(and(eq(courseLecturesTable.courseId, courseId), eq(courseLecturesTable.status, "published")))
+    .orderBy(asc(courseSectionsTable.sortOrder), asc(courseLecturesTable.sortOrder));
+
+  // Find current lecture index
+  const currentIndex = allLectures.findIndex((l) => l.sectionId === sectionId && l.sortOrder === sortOrder);
+
+  let nextLecture = null;
+  let prevLecture = null;
+
+  if (currentIndex > 0) {
+    const prev = allLectures[currentIndex - 1];
+    prevLecture = {
+      id: prev.id,
+      title: prev.title,
+      type: prev.type,
+    };
+  }
+
+  if (currentIndex >= 0 && currentIndex < allLectures.length - 1) {
+    const next = allLectures[currentIndex + 1];
+    nextLecture = {
+      id: next.id,
+      title: next.title,
+      type: next.type,
+    };
+  }
+
+  return { nextLecture, prevLecture };
+}
+
+/**
  * Get lecture detail with assets
  *
  * @param db - LibSQLDatabase instance
@@ -254,6 +311,7 @@ export async function getLectureDetail(db: LibSQLDatabase<Record<string, never>>
       isPreview: courseLecturesTable.isPreview,
       status: courseLecturesTable.status,
       publishedAt: courseLecturesTable.publishedAt,
+      sortOrder: courseLecturesTable.sortOrder,
     })
     .from(courseLecturesTable)
     .where(eq(courseLecturesTable.id, lectureId))
@@ -291,6 +349,14 @@ export async function getLectureDetail(db: LibSQLDatabase<Record<string, never>>
     progress = userProgress || null;
   }
 
+  // Get next and previous lecture
+  const { nextLecture, prevLecture } = await getNextPrevLecture(
+    db,
+    lecture.courseId,
+    lecture.sectionId,
+    lecture.sortOrder,
+  );
+
   return {
     ...lecture,
     assets: assets.map((a) => ({
@@ -298,5 +364,7 @@ export async function getLectureDetail(db: LibSQLDatabase<Record<string, never>>
       meta: a.metaJson ? JSON.parse(a.metaJson) : null,
     })),
     progress,
+    nextLecture,
+    prevLecture,
   };
 }

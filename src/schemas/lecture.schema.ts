@@ -41,6 +41,13 @@ export const LectureAssetSchema = t.Object({
   meta: t.Any(), // JSON field for additional metadata
 });
 
+// Next/Prev Lecture Schema
+export const NextPrevLectureSchema = t.Object({
+  id: t.String(),
+  title: t.String(),
+  type: t.Union([t.Literal("video"), t.Literal("quiz"), t.Literal("article")]),
+});
+
 // Lecture Detail Schema
 export const LectureDetailSchema = t.Object({
   id: t.String(),
@@ -63,6 +70,8 @@ export const LectureDetailSchema = t.Object({
     }),
     t.Null(),
   ]),
+  nextLecture: t.Union([NextPrevLectureSchema, t.Null()]),
+  prevLecture: t.Union([NextPrevLectureSchema, t.Null()]),
 });
 
 // Request Schemas
